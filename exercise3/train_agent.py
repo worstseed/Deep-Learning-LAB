@@ -5,6 +5,7 @@ import numpy as np
 import os
 import gzip
 import matplotlib.pyplot as plt
+import tensorflow as tf
 
 from model import Model
 from utils import *
@@ -136,10 +137,12 @@ def reshape_input_data(x):
 #                 lr,
 #                 model_dir = "./models",
 #                 tensorboard_dir = "./tensorboard"):
-def train_model(X_train, y_train, X_valid, y_valid,
-            n_minibatches = 100000, batch_size = 64, lr = 0.0001,
-            num_filters = 16, filter_size = 5,
-            model_dir = "./models", tensorboard_dir = "./tensorboard"):
+def train_model(X_train, y_train,
+                X_valid, y_valid,
+                n_minibatches, batch_size,
+                lr,
+                history_length=1,
+                model_dir = "./models", tensorboard_dir = "./tensorboard"):
 
     # create result and model folders
     if not os.path.exists(model_dir):
@@ -150,22 +153,20 @@ def train_model(X_train, y_train, X_valid, y_valid,
     X_valid = reshape_input_data(X_valid)
     print("... input data reshaped")
 
-    when_to_show = int(input("Show every x iteration: "))
+    # when_to_show = int(input("Show every x iteration: "))
 
-    # agent = Model(
-    #             history_length = history_length,
-    #             name = 'first_net',
-    #             lstm_layers=[],
-    #             learning_rate = lr)
-    agent = Model(num_filters, filter_size, lr)
+    agent = Model(batch_size = batch_size, learning_rate = lr, history_length = history_length)
     print("... model created")
 
     # tensorboard_eval = Evaluation(tensorboard_dir)
 
     # Initialization
-    # agent.session.run(agent.init)
-    agent.sess.run(agent.init)
+    agent.sess.run(tf.global_variables_initializer())
+    tf.reset_default_graph()
     print("... model initialized")
+
+    training_cost = np.zeros((n_minibatches))
+    validation_cost = np.zeros((n_minibatches))
 
     print("... train model")
     # training loop
@@ -176,15 +177,16 @@ def train_model(X_train, y_train, X_valid, y_valid,
         X_train_mini = X_train[first_index : last_index, :, :, :]
         y_train_mini = y_train[first_index : last_index, :]
 
-        # print(y_train_mini)
-
+        training_cost[i] += agent.sess.run(agent.cost, feed_dict={agent.x_input: X_train_mini, agent.y_label: y_train_mini})
+        validation_cost[i] += agent.sess.run(agent.cost, feed_dict={agent.x_input: X_train_mini, agent.y_label: y_train_mini})
+        # training_accuracy[i] += agent.sess.run(agent.accuracy, feed_dict={agent.x_input: X_train_mini, agent.y_label: y_train_mini})
+        # validation_accuracy[i] += agent.sess.run(agent.accuracy, feed_dict={agent.x_input: X_train_mini, agent.y_label: y_train_mini})
         # agent.session.run(agent.trainer, feed_dict = {agent.X: X_train_mini, agent.y: y_train_mini})
-        agent.train_step.run(session = agent.sess, feed_dict={agent.x_image: X_train_mini, agent.y_: y_train_mini})
+        # train_cost += agent.sess.run(agent.cost, feed_dict={agent.x_input: X_train_mini, agent.y_label: y_train_mini})
 
         # compute training/ validation accuracy and loss for the batch and visualize them with tensorboard. You can watch the progress of
         #    your training in your web browser
-        if (i % when_to_show == 0):
-            print("Train accuracy: ", agent.accuracy.eval(session = agent.sess, feed_dict={agent.x_image: X_train_mini, agent.y_: y_train_mini}))
+        # if (i % when_to_show == 0):
             # train_loss, train_accuracy = agent.evaluate(X_train, y_train)
             # valid_loss, valid_accuracy = agent.evaluate(X_valid, y_valid)
 
@@ -195,14 +197,18 @@ def train_model(X_train, y_train, X_valid, y_valid,
             #         " Test Loss: ", valid_loss)
 
             # agent.save('i' + str(i) + '_TrainAccuracy_' + "{:.4f}".format(train_accuracy * 100))
-
+        print("[%d/%d]: training_cost: %.2f, validation_cost: %.2f" %(i+1, n_minibatches, 100*training_cost[i], 100*validation_cost[i]))
+        # print("[%d/%d]: training_accuracy: %.2f, validation_accuracy: %.2f" %(i+1, epochs, 100*training_accuracy[i], 100*validation_accuracy[i]))
+        # eval_dict = {"train":training_cost[i], "valid":validation_cost[i]}
+        # tensorboard_eval.write_episode_data(i, eval_dict)
         # tensorboard_eval.write_episode_data(...  # TODO: implement the training)
 
 
     # save your agent
-    # agent.save()
-    model_dir = agent.save(os.path.join(model_dir, "agent.ckpt"))
-    print("... model saved in file: %s" % model_dir)
+    save_path = os.path.join(model_dir, "agent.ckpt")
+    agent.save(save_path)
+    print("... model saved in file: %s" % save_path)
+    agent.sess.close()
 
 if __name__ == "__main__":
 
@@ -220,7 +226,7 @@ if __name__ == "__main__":
     # plot_data(X_train, y_train, history_length, history_length + 5, 'Sample Train Data')
     # plot_data(X_train, y_train, history_length, history_length + 5, 'Sample Validation Data')
 
-    # train model (you can change the parameters!)
-    train_model(X_train, y_train_hot, X_valid, y_valid_hot,
-                n_minibatches = 100000, batch_size = 64, lr = 0.0001,
-                num_filters = 16, filter_size = 5)
+    train_model(X_train, y_train,
+                X_valid, y_valid,
+                history_length = history_length,
+                n_minibatches = 1000, batch_size = 64, lr = 0.0004)

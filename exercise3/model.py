@@ -1,58 +1,63 @@
 import tensorflow as tf
-import numpy as np
 
 class Model:
+    def __init__(self, history_length = 1, learning_rate = 3e-4, batch_size = 1):
 
-    def __init__(self, num_filters, filter_size, lr):
+        self.learning_rate = learning_rate
+        # variable for input and labels
+        self.x_input = tf.placeholder(dtype=tf.float32, shape = [None, 96, 96, history_length], name = "x_input")
+        self.y_label = tf.placeholder(dtype=tf.float32, shape = [None, 3], name = "y_label")
 
-        self.x_image = tf.placeholder(tf.float32, shape=[None,96,96,1], name='x')
-        self.y_ = tf.placeholder(tf.float32, shape=[None, 5], name='y_')
-        self.y_conv = tf.placeholder(tf.float32, shape=[None, 5], name='y_conv')
+        batch_size = tf.shape(self.x_input)[0]
+        # first layers + relu
+        self.W_conv1 = tf.get_variable("W_conv1", [8, 8, history_length, 64], initializer=tf.contrib.layers.xavier_initializer())
+        conv1 = tf.nn.conv2d(self.x_input, self.W_conv1, strides=[1, 2, 2, 1], padding='VALID')
+        conv1_a = tf.nn.relu(conv1)
+        # second layer + relu:
+        self.W_conv2 = tf.get_variable("W_conv2", [4, 4, 64, 64], initializer=tf.contrib.layers.xavier_initializer())
+        conv2 = tf.nn.conv2d(conv1_a, self.W_conv2, strides=[1, 2, 2, 1], padding='VALID')
+        conv2_a = tf.nn.relu(conv2)
+        # third layer + relu:
+        self.W_conv3 = tf.get_variable("W_conv3", [3, 3, 64, 64], initializer=tf.contrib.layers.xavier_initializer())
+        conv3 = tf.nn.conv2d(conv2_a, self.W_conv3, strides=[1, 2, 2, 1], padding='VALID')
+        conv3_a = tf.nn.relu(conv3)
+        # forth layer + relu:
+        self.W_conv4 = tf.get_variable("W_conv4", [3, 3, 64, 32], initializer=tf.contrib.layers.xavier_initializer())
+        conv4 = tf.nn.conv2d(conv3_a, self.W_conv4, strides=[1, 2, 2, 1], padding='VALID')
+        conv4_a = tf.nn.relu(conv4)
 
-        self.W_conv1 = self.weight_variable([filter_size, filter_size, 1, num_filters])
-        self.b_conv1 = self.bias_variable([num_filters])
 
-        self.h_conv1 = tf.nn.relu(self.conv2d(self.x_image, self.W_conv1) + self.b_conv1)
-        self.h_pool1 = self.max_pool_2x2(self.h_conv1)
+        flatten = tf.contrib.layers.flatten(conv4_a)
+        # first dense layer + relu + dropout
+        fc1 = tf.contrib.layers.fully_connected(flatten, 400, activation_fn=tf.nn.relu)
+        fc1_drop = tf.nn.dropout(fc1, 0.8)
+        # second dense layer + relu:
+        fc2 = tf.contrib.layers.fully_connected(fc1_drop, 400, activation_fn=tf.nn.relu)
+        fc2_drop = tf.nn.dropout(fc2, 0.8)
+        # third dense layer + relu
+        fc3 = tf.contrib.layers.fully_connected(fc2_drop, 50, activation_fn=tf.nn.relu)
 
-        self.W_conv2 = self.weight_variable([filter_size, filter_size, num_filters, num_filters])
-        self.b_conv2 = self.bias_variable([num_filters])
+        # LSTM layer
+        a_lstm = tf.nn.rnn_cell.LSTMCell(num_units=256)
+        a_lstm = tf.nn.rnn_cell.DropoutWrapper(a_lstm, output_keep_prob=0.8)
+        a_lstm = tf.nn.rnn_cell.MultiRNNCell(cells=[a_lstm])
 
-        self.h_conv2 = tf.nn.relu(self.conv2d(self.h_pool1, self.W_conv2) + self.b_conv2)
-        self.h_pool2 = self.max_pool_2x2(self.h_conv2)
+        a_init_state = a_lstm.zero_state(batch_size=batch_size, dtype=tf.float32)
+        lstm_in = tf.expand_dims(fc3, axis=1)
 
-        self.W_conv3 = self.weight_variable([filter_size, filter_size, num_filters, num_filters])
-        self.b_conv3 = self.bias_variable([num_filters])
+        a_outputs, a_final_state = tf.nn.dynamic_rnn(cell=a_lstm, inputs=lstm_in, initial_state=a_init_state)
+        a_cell_out = tf.reshape(a_outputs, [-1, 256], name='flatten_lstm_outputs')
 
-        self.h_conv3 = tf.nn.relu(self.conv2d(self.h_pool2, self.W_conv3) + self.b_conv3)
-        self.h_pool3 = self.max_pool_2x2(self.h_conv3)
-
-        self.W_conv4 = self.weight_variable([filter_size, filter_size, num_filters, num_filters])
-        self.b_conv4 = self.bias_variable([num_filters])
-
-        self.h_conv4 = tf.nn.relu(self.conv2d(self.h_pool3, self.W_conv4) + self.b_conv4)
-        self.h_pool4 = self.max_pool_2x2(self.h_conv4)
-
-        self.W_fc1 = self.weight_variable([6 * 6 * num_filters, 400])
-        self.b_fc1 = self.bias_variable([400])
-
-        self.h_pool4_flat = tf.reshape(self.h_pool4, [-1, 6*6*num_filters])
-        self.h_fc1 = tf.nn.relu(tf.matmul(self.h_pool4_flat, self.W_fc1) + self.b_fc1)
-
-        self.W_fc2 = self.weight_variable([400, 5])
-        self.b_fc2 = self.bias_variable([5])
-
-        self.y_conv=tf.nn.softmax(tf.matmul(self.h_fc1, self.W_fc2) + self.b_fc2)
-
-        self.cross_entropy = -tf.reduce_sum(self.y_*tf.log(self.y_conv))
-        self.train_step = tf.train.GradientDescentOptimizer(lr).minimize(self.cross_entropy)
-        self.correct_prediction = tf.equal(tf.argmax(self.y_conv, 1), tf.argmax(self.y_, 1))
-
-        self.prediction = tf.argmax(self.y_conv,1, name='prediction')
-        self.accuracy = tf.reduce_mean(tf.cast(self.correct_prediction, tf.float32), name='accuracy')
-
+        # output layer:
+        self.output = tf.contrib.layers.fully_connected(a_cell_out, 3, activation_fn=None)
+        # Loss
+        self.cost = tf.reduce_mean(tf.losses.mean_squared_error(predictions=self.output, labels=self.y_label))
+        # accuracy
+        # self.accuracy = tf.reduce_mean(tf.cast(self.output, tf.float32), name = 'accuracy')
+        # optimizer
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cost)
+        # Start tensorflow session
         self.sess = tf.Session()
-        self.init = tf.global_variables_initializer()
 
         self.saver = tf.train.Saver()
 
@@ -61,18 +66,3 @@ class Model:
 
     def save(self, file_name):
         self.saver.save(self.sess, file_name)
-        return file_name
-
-    def weight_variable(self, shape):
-        initial = tf.truncated_normal(shape, stddev=0.00000001)
-        return tf.Variable(initial)
-
-    def bias_variable(self, shape):
-        initial = tf.constant(0.00000001, shape=shape)
-        return tf.Variable(initial)
-
-    def conv2d(self, x, W):
-        return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
-
-    def max_pool_2x2(self, x):
-        return tf.nn.max_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')
