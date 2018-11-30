@@ -91,8 +91,8 @@ if __name__ == "__main__":
             samples["state"].append(state)            # state has shape (96, 96, 3)
             samples["action"].append(np.array(a))     # action has shape (1, 3)
             samples["next_state"].append(next_state)
-            samples["reward"].append(r)
-            samples["terminal"].append(done)
+            #samples["reward"].append(r)
+            #samples["terminal"].append(done)
 
             state = next_state
             steps += 1

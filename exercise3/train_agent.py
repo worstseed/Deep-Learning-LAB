@@ -229,4 +229,4 @@ if __name__ == "__main__":
     train_model(X_train, y_train,
                 X_valid, y_valid,
                 history_length = history_length,
-                n_minibatches = 1000, batch_size = 64, lr = 0.0004)
+                n_minibatches = 10000, batch_size = 64, lr = 0.0004)
