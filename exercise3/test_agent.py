@@ -9,8 +9,9 @@ import json
 from model import Model
 from utils import *
 
+history_length = 1
 
-def run_episode(env, agent, rendering=True, max_timesteps=1000, history_length = 5):
+def run_episode(env, agent, rendering=True, max_timesteps=1000, history_length = 1):
 
     episode_reward = 0
     step = 0
@@ -29,6 +30,7 @@ def run_episode(env, agent, rendering=True, max_timesteps=1000, history_length =
         # actions again. a needs to have a shape like np.array([0.0, 0.0, 0.0])
         a = agent.sess.run(agent.output, feed_dict={agent.x_input:state_history})[0]
         next_state, r, done, info = env.step(a)
+        print("next state: ", next_state)
         episode_reward += r
         state = next_state
         step += 1
@@ -53,8 +55,6 @@ if __name__ == "__main__":
     rendering = True
 
     n_test_episodes = 15                  # number of episodes to test
-
-    history_length = 5
 
     # TODO: load agent
     agent = Model(history_length = history_length)

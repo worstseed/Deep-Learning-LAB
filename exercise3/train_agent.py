@@ -32,6 +32,16 @@ def read_data(datasets_dir = "./data", frac = 0.1):
     X_valid, y_valid = X[int((1 - frac) * n_samples):], y[int((1 - frac) * n_samples):]
     return X_train, y_train, X_valid, y_valid
 
+def shuffle_data(X, y):
+
+    zipped = np.array(list(zip(X ,y)))
+    np.random.shuffle(zipped)
+    X, y = zip(*zipped)
+    X = np.array(X)
+    y = np.array(y)
+
+    return X, y
+
 def reshape_to_history_length(x, history_length):
 
     batch_size   = x.shape[0]
@@ -98,6 +108,36 @@ def get_minibatch_indices(data_size, batch_size, history_length):
 def reshape_input_data(x):
     return np.reshape(x, (x.shape[0], 96, 96, 1))
 
+def count_output_data_hot_instances(y, j = ''):
+
+    counter_s = 0
+    counter_l = 0
+    counter_r = 0
+    counter_a = 0
+    counter_b = 0
+
+    for i in range(y.shape[0]):
+        if (y_train_hot[i] == [1., 0., 0., 0., 0.]).all():
+            counter_s += 1
+        if (y_train_hot[i] == [0., 1., 0., 0., 0.]).all():
+            counter_l += 1
+        if (y_train_hot[i] == [0., 0., 1., 0., 0.]).all():
+            counter_r += 1
+        if (y_train_hot[i] == [0., 0., 0., 1., 0.]).all():
+            counter_a += 1
+        if (y_train_hot[i] == [0., 0., 0., 0., 1.]).all():
+            counter_b += 1
+
+    print("----- OUTPUT DATA -----")
+    if (j != ''):
+        print("------- ", j, "--------")
+    print("STRAIGHT: ", counter_s)
+    print("LEFT: ", counter_l)
+    print("RIGHT: ", counter_r)
+    print("ACCELERATE: ", counter_a)
+    print("BRAKE: ", counter_b)
+    print("-----------------------")
+
 def train_model(X_train, y_train,
                 X_valid, y_valid,
                 n_minibatches, batch_size,
@@ -119,7 +159,7 @@ def train_model(X_train, y_train,
     agent = Model(batch_size = batch_size, learning_rate = lr, history_length = history_length)
     print("... model created")
 
-    tensorboard_eval = Evaluation(tensorboard_dir)
+    # tensorboard_eval = Evaluation(tensorboard_dir)
 
     # Initialization
     agent.sess.run(tf.global_variables_initializer())
@@ -138,6 +178,8 @@ def train_model(X_train, y_train,
         X_train_mini = X_train[first_index : last_index, :, :, :]
         y_train_mini = y_train[first_index : last_index, :]
 
+        count_output_data_hot_instances(y_train_mini, i)
+
         training_cost[i] += agent.sess.run(agent.cost, feed_dict={agent.x_input: X_train_mini, agent.y_label: y_train_mini})
         validation_cost[i] += agent.sess.run(agent.cost, feed_dict={agent.x_input: X_train_mini, agent.y_label: y_train_mini})
 
@@ -154,8 +196,8 @@ def train_model(X_train, y_train,
             #         " Test Loss: ", valid_loss)
 
         print("[%d/%d]: training_cost: %.2f, validation_cost: %.2f" %(i+1, n_minibatches, 100*training_cost[i], 100*validation_cost[i]))
-        eval_dict = {"train":training_cost[i], "valid":validation_cost[i]}
-        tensorboard_eval.write_episode_data(i, eval_dict)
+        # eval_dict = {"train":training_cost[i], "valid":validation_cost[i]}
+        # tensorboard_eval.write_episode_data(i, eval_dict)
 
 
     # save your agent
@@ -172,11 +214,20 @@ if __name__ == "__main__":
     X_train, y_train, X_valid, y_valid = read_data("./data")
     print("... data read")
 
+    X_train, y_train = shuffle_data(X_train, y_train)
+    X_valid, y_valid = shuffle_data(X_valid, y_valid)
+    print("... data shuffled")
+
     # preprocess data
     X_train, y_train_hot, X_valid, y_valid_hot = preprocessing(X_train, y_train, X_valid, y_valid, history_length = history_length)
     print("... data preprocessed")
 
-    train_model(X_train, y_train,
-                X_valid, y_valid,
+    print("X_train shape: ", X_train.shape)
+    print("X_valid shape: ", X_valid.shape)
+    count_output_data_hot_instances(y_train_hot)
+    count_output_data_hot_instances(y_valid_hot)
+
+    train_model(X_train, y_train_hot,
+                X_valid, y_valid_hot,
                 history_length = history_length,
                 n_minibatches = 10000, batch_size = 64, lr = 0.0004)

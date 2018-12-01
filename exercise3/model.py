@@ -6,7 +6,7 @@ class Model:
         self.learning_rate = learning_rate
         # variable for input and labels
         self.x_input = tf.placeholder(dtype=tf.float32, shape = [None, 96, 96, history_length], name = "x_input")
-        self.y_label = tf.placeholder(dtype=tf.float32, shape = [None, 3], name = "y_label")
+        self.y_label = tf.placeholder(dtype=tf.float32, shape = [None, 5], name = "y_label")
 
         batch_size = tf.shape(self.x_input)[0]
         # first layers + relu
@@ -49,7 +49,7 @@ class Model:
         a_cell_out = tf.reshape(a_outputs, [-1, 256], name='flatten_lstm_outputs')
 
         # output layer:
-        self.output = tf.contrib.layers.fully_connected(a_cell_out, 3, activation_fn=None)
+        self.output = tf.contrib.layers.fully_connected(a_cell_out, 5, activation_fn=None)
         # Loss
         self.cost = tf.reduce_mean(tf.losses.mean_squared_error(predictions=self.output, labels=self.y_label))
         # accuracy
