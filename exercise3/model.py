@@ -53,7 +53,7 @@ class Model:
         # Loss
         self.cost = tf.reduce_mean(tf.losses.mean_squared_error(predictions=self.output, labels=self.y_label))
         # accuracy
-        # self.accuracy = tf.reduce_mean(tf.cast(self.output, tf.float32), name = 'accuracy')
+
         # optimizer
         self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cost)
         # Start tensorflow session

@@ -10,7 +10,7 @@ from model import Model
 from utils import *
 
 
-def run_episode(env, agent, rendering=True, max_timesteps=1000, history_length = 1):
+def run_episode(env, agent, rendering=True, max_timesteps=1000, history_length = 5):
 
     episode_reward = 0
     step = 0
@@ -54,7 +54,7 @@ if __name__ == "__main__":
 
     n_test_episodes = 15                  # number of episodes to test
 
-    history_length = 1
+    history_length = 5
 
     # TODO: load agent
     agent = Model(history_length = history_length)

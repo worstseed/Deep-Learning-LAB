@@ -32,38 +32,6 @@ def read_data(datasets_dir = "./data", frac = 0.1):
     X_valid, y_valid = X[int((1 - frac) * n_samples):], y[int((1 - frac) * n_samples):]
     return X_train, y_train, X_valid, y_valid
 
-# useful function, we don't really need that, but it helps.
-# borrowed from JAB.
-def plot_data(x, y, history_length = 1, rows = 10, title = ''):
-
-    image_path = './img/'
-
-    fig = plt.figure(1)
-    fig.suptitle(title)
-    plt.subplots_adjust(hspace = 1)
-
-    rows = rows
-    columns = history_length
-
-    spi = 1
-
-    for i in range(rows):
-        for j in range(columns):
-            subplot = fig.add_subplot(rows, columns, spi)
-            subplot.imshow(x[i, :, :, j], cmap='gray')
-
-            subplot.set_xticks([])
-            subplot.set_yticks([])
-
-            if j == columns - 1:
-                subplot.set(xlabel='A: ' + ACTIONS[action_to_id(y[i])]['log'])
-
-            spi += 1
-
-    fig.show()
-
-    fig.savefig(image_path + title + '.png', dpi=300)
-
 def reshape_to_history_length(x, history_length):
 
     batch_size   = x.shape[0]
@@ -130,18 +98,11 @@ def get_minibatch_indices(data_size, batch_size, history_length):
 def reshape_input_data(x):
     return np.reshape(x, (x.shape[0], 96, 96, 1))
 
-# def train_model(X_train, y_train,
-#                 X_valid, y_valid,
-#                 n_minibatches,
-#                 batch_size,
-#                 lr,
-#                 model_dir = "./models",
-#                 tensorboard_dir = "./tensorboard"):
 def train_model(X_train, y_train,
                 X_valid, y_valid,
                 n_minibatches, batch_size,
                 lr,
-                history_length=1,
+                history_length = 1,
                 model_dir = "./models", tensorboard_dir = "./tensorboard"):
 
     # create result and model folders
@@ -158,7 +119,7 @@ def train_model(X_train, y_train,
     agent = Model(batch_size = batch_size, learning_rate = lr, history_length = history_length)
     print("... model created")
 
-    # tensorboard_eval = Evaluation(tensorboard_dir)
+    tensorboard_eval = Evaluation(tensorboard_dir)
 
     # Initialization
     agent.sess.run(tf.global_variables_initializer())
@@ -179,10 +140,6 @@ def train_model(X_train, y_train,
 
         training_cost[i] += agent.sess.run(agent.cost, feed_dict={agent.x_input: X_train_mini, agent.y_label: y_train_mini})
         validation_cost[i] += agent.sess.run(agent.cost, feed_dict={agent.x_input: X_train_mini, agent.y_label: y_train_mini})
-        # training_accuracy[i] += agent.sess.run(agent.accuracy, feed_dict={agent.x_input: X_train_mini, agent.y_label: y_train_mini})
-        # validation_accuracy[i] += agent.sess.run(agent.accuracy, feed_dict={agent.x_input: X_train_mini, agent.y_label: y_train_mini})
-        # agent.session.run(agent.trainer, feed_dict = {agent.X: X_train_mini, agent.y: y_train_mini})
-        # train_cost += agent.sess.run(agent.cost, feed_dict={agent.x_input: X_train_mini, agent.y_label: y_train_mini})
 
         # compute training/ validation accuracy and loss for the batch and visualize them with tensorboard. You can watch the progress of
         #    your training in your web browser
@@ -196,12 +153,9 @@ def train_model(X_train, y_train,
             #         ", Test accuracy: ", valid_accuracy,
             #         " Test Loss: ", valid_loss)
 
-            # agent.save('i' + str(i) + '_TrainAccuracy_' + "{:.4f}".format(train_accuracy * 100))
         print("[%d/%d]: training_cost: %.2f, validation_cost: %.2f" %(i+1, n_minibatches, 100*training_cost[i], 100*validation_cost[i]))
-        # print("[%d/%d]: training_accuracy: %.2f, validation_accuracy: %.2f" %(i+1, epochs, 100*training_accuracy[i], 100*validation_accuracy[i]))
-        # eval_dict = {"train":training_cost[i], "valid":validation_cost[i]}
-        # tensorboard_eval.write_episode_data(i, eval_dict)
-        # tensorboard_eval.write_episode_data(...  # TODO: implement the training)
+        eval_dict = {"train":training_cost[i], "valid":validation_cost[i]}
+        tensorboard_eval.write_episode_data(i, eval_dict)
 
 
     # save your agent
@@ -221,10 +175,6 @@ if __name__ == "__main__":
     # preprocess data
     X_train, y_train_hot, X_valid, y_valid_hot = preprocessing(X_train, y_train, X_valid, y_valid, history_length = history_length)
     print("... data preprocessed")
-
-    # # Plot preprocessed data for debugging - still JAB
-    # plot_data(X_train, y_train, history_length, history_length + 5, 'Sample Train Data')
-    # plot_data(X_train, y_train, history_length, history_length + 5, 'Sample Validation Data')
 
     train_model(X_train, y_train,
                 X_valid, y_valid,
