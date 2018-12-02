@@ -58,7 +58,7 @@ if __name__ == "__main__":
     n_test_episodes = 15                  # number of episodes to test
 
     # load agent
-    agent = Model(history_length = history_length)
+    agent = Model(history_length = history_length, set_to_default=True)
     agent.load("models/agent.ckpt")
 
     env = gym.make('CarRacing-v0').unwrapped

@@ -1,11 +1,14 @@
 import tensorflow as tf
+import os
 
 class Model:
-    def __init__(self, history_length = 1, batch_size = 1):
+    def __init__(self, history_length = 1, batch_size = 1, set_to_default=False):
 
-        self.set_parameters()
+        self.set_parameters(set_to_default=set_to_default)
 
-        self.x = tf.placeholder(tf.float32, shape=[None, self.img_shape[0], self.img_shape[1], history_length], name='x')
+        self.x = tf.placeholder(tf.float32,
+                               shape=[None, self.img_shape[0], self.img_shape[1], history_length],
+                               name='x')
 
         #x_image = tf.reshape(self.x, [-1, img_size, img_size, history_length])
 
@@ -74,15 +77,21 @@ class Model:
 
         self.saver = tf.train.Saver()
 
-    def setup_single_variable(self, name, default):
+    def setup_single_variable(self, name="", default=0, set_to_default=False):
 
-        var = input(name + " ( default: \"" + str(default) + "\"): ")
+        if set_to_default:
+                return default
+
+        var = input(name + " ( default: \"" + str(default) + "\" ): ")
         if not var:
                 var = default
 
         return var
 
-    def setup_convolutional_layer(self, default_filter_size, default_num_filters, number):
+    def setup_convolutional_layer(self, default_filter_size=0, default_num_filters=0, number=0, set_to_default=False):
+
+        if set_to_default:
+                return default_filter_size, default_num_filters
 
         print("----- CONVOLUTION LAYER %s -----" % number)
 
@@ -91,10 +100,14 @@ class Model:
 
         return filter_size, num_filters
 
-    def set_parameters(self):
+    def set_parameters(self, set_to_default):
+		
+        os.system('clear')	
+
+        print("----- SETUP PARAMETERS -----")	
 
         # The number of pixels in each dimension of an image.
-        self.img_size = self.setup_single_variable(name = "Image size", default=96)
+        self.img_size = self.setup_single_variable(name = "Image size", default=96, set_to_default=set_to_default)
 
         # Tuple with height and width of images used to reshape arrays.
         self.img_shape = (self.img_size, self.img_size)
@@ -103,25 +116,25 @@ class Model:
         self.img_size_flat = self.img_shape[0] * self.img_shape[1]
 
         # Number of classes, one class for each of 5 actions.
-        self.num_classes = self.setup_single_variable(name = "# of classes", default=5)
+        self.num_classes = self.setup_single_variable(name = "# of classes", default=5, set_to_default=set_to_default)
 	
         # Learning rate.
-        self.learning_rate = self.setup_single_variable(name = "Learning rate", default=3e-4)
+        self.learning_rate = self.setup_single_variable(name = "Learning rate", default=3e-4, set_to_default=set_to_default)
 
         # Convolutional Layer 1.
-        self.filter_size1, self.num_filters1 = self.setup_convolutional_layer(default_filter_size=3, default_num_filters=16, number=1)
+        self.filter_size1, self.num_filters1 = self.setup_convolutional_layer(default_filter_size=3, default_num_filters=16, number=1, set_to_default=set_to_default)
 
         # Convolutional Layer 2.
-        self.filter_size2, self.num_filters2 = self.setup_convolutional_layer(default_filter_size=3, default_num_filters=32, number=2)        
+        self.filter_size2, self.num_filters2 = self.setup_convolutional_layer(default_filter_size=3, default_num_filters=32, number=2, set_to_default=set_to_default)        
 
         # Convolutional Layer 3.
-        self.filter_size3, self.num_filters3 = self.setup_convolutional_layer(default_filter_size=3, default_num_filters=32, number=3) 
+        self.filter_size3, self.num_filters3 = self.setup_convolutional_layer(default_filter_size=3, default_num_filters=32, number=3, set_to_default=set_to_default) 
 
         # Convolutional Layer 4.
-        self.filter_size4, self.num_filters4 = self.setup_convolutional_layer(default_filter_size=3, default_num_filters=32, number=4)         
+        self.filter_size4, self.num_filters4 = self.setup_convolutional_layer(default_filter_size=3, default_num_filters=32, number=4, set_to_default=set_to_default)         
 
         # Fully-connected layer.
-        self.fc_size = self.setup_single_variable(name = "# of neurons in fully connected layer", default=128)
+        self.fc_size = self.setup_single_variable(name = "# of neurons in fully connected layer", default=128, set_to_default=set_to_default)
 
     def new_weights(self, shape):
         return tf.Variable(tf.truncated_normal(shape, stddev=0.05))

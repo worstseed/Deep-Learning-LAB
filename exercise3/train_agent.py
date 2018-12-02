@@ -174,6 +174,7 @@ def train_model(X_train, y_train,
     training_accuracy = np.zeros((n_minibatches))
     #validation_cost = np.zeros((n_minibatches))
 
+    os.system('clear')
     print("... train model")
     # training loop
     for i in range(n_minibatches):
