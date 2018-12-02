@@ -21,16 +21,17 @@ def run_episode(env, agent, rendering=True, max_timesteps=1000, history_length =
 
     while True:
 
-        # TODO: preprocess the state in the same way than in in your preprocessing in train_agent.py
+        # preprocess the state in the same way than in in your preprocessing in train_agent.py
         state = rgb2gray(state)
         state_history[0,:,:,0:history_length-1] = state_history[0,:,:,1:]
         state_history[0,:,:,-1] = state
 
-        # TODO: get the action from your agent! If you use discretized actions you need to transform them to continuous
+        # get the action from your agent! If you use discretized actions you need to transform them to continuous
         # actions again. a needs to have a shape like np.array([0.0, 0.0, 0.0])
-        a = agent.sess.run(agent.output, feed_dict={agent.x_input:state_history})[0]
+        a = agent.session.run(agent.y_pred, feed_dict={agent.x:state_history})[0]
+
         next_state, r, done, info = env.step(a)
-        print("next state: ", next_state)
+        #print("next state: ", next_state)
         episode_reward += r
         state = next_state
         step += 1
@@ -56,7 +57,7 @@ if __name__ == "__main__":
 
     n_test_episodes = 15                  # number of episodes to test
 
-    # TODO: load agent
+    # load agent
     agent = Model(history_length = history_length)
     agent.load("models/agent.ckpt")
 

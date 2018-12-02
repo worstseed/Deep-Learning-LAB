@@ -1,68 +1,239 @@
 import tensorflow as tf
 
 class Model:
-    def __init__(self, history_length = 1, learning_rate = 3e-4, batch_size = 1):
+    def __init__(self, history_length = 1, batch_size = 1):
 
-        self.learning_rate = learning_rate
-        # variable for input and labels
-        self.x_input = tf.placeholder(dtype=tf.float32, shape = [None, 96, 96, history_length], name = "x_input")
-        self.y_label = tf.placeholder(dtype=tf.float32, shape = [None, 5], name = "y_label")
+        self.set_parameters()
 
-        batch_size = tf.shape(self.x_input)[0]
-        # first layers + relu
-        self.W_conv1 = tf.get_variable("W_conv1", [8, 8, history_length, 64], initializer=tf.contrib.layers.xavier_initializer())
-        conv1 = tf.nn.conv2d(self.x_input, self.W_conv1, strides=[1, 2, 2, 1], padding='VALID')
-        conv1_a = tf.nn.relu(conv1)
-        # second layer + relu:
-        self.W_conv2 = tf.get_variable("W_conv2", [4, 4, 64, 64], initializer=tf.contrib.layers.xavier_initializer())
-        conv2 = tf.nn.conv2d(conv1_a, self.W_conv2, strides=[1, 2, 2, 1], padding='VALID')
-        conv2_a = tf.nn.relu(conv2)
-        # third layer + relu:
-        self.W_conv3 = tf.get_variable("W_conv3", [3, 3, 64, 64], initializer=tf.contrib.layers.xavier_initializer())
-        conv3 = tf.nn.conv2d(conv2_a, self.W_conv3, strides=[1, 2, 2, 1], padding='VALID')
-        conv3_a = tf.nn.relu(conv3)
-        # forth layer + relu:
-        self.W_conv4 = tf.get_variable("W_conv4", [3, 3, 64, 32], initializer=tf.contrib.layers.xavier_initializer())
-        conv4 = tf.nn.conv2d(conv3_a, self.W_conv4, strides=[1, 2, 2, 1], padding='VALID')
-        conv4_a = tf.nn.relu(conv4)
+        self.x = tf.placeholder(tf.float32, shape=[None, self.img_shape[0], self.img_shape[1], history_length], name='x')
+
+        #x_image = tf.reshape(self.x, [-1, img_size, img_size, history_length])
+
+        y_label = tf.placeholder(dtype=tf.float32,
+                                     shape = [None, self.num_classes],	
+                                     name = "y_label")
+
+        self.y_true = tf.placeholder(tf.float32,
+                                     shape=[None, self.num_classes],
+                                     name='y_true')
+
+        y_true_cls = tf.argmax(self.y_true, axis=1)
+
+        layer_conv1, self.weights_conv1 = self.new_conv_layer(input=self.x,
+				                                             num_input_channels=history_length,
+				                                             filter_size=self.filter_size1,
+				                                             num_filters=self.num_filters1,
+				                                             use_pooling=True)
+
+        layer_conv2, self.weights_conv2 = self.new_conv_layer(input=layer_conv1,
+				                                             num_input_channels=self.num_filters1,
+				                                             filter_size=self.filter_size2,
+				                                             num_filters=self.num_filters2,
+				                                             use_pooling=True)
+
+        layer_conv3, self.weights_conv3 = self.new_conv_layer(input=layer_conv2,
+				                                             num_input_channels=self.num_filters2,
+				                                             filter_size=self.filter_size3,
+				                                             num_filters=self.num_filters3,
+				                                             use_pooling=True)
+
+        layer_conv4, self.weights_conv4 = self.new_conv_layer(input=layer_conv3,
+				                                             num_input_channels=self.num_filters3,
+				                                             filter_size=self.filter_size4,
+				                                             num_filters=self.num_filters4,
+				                                             use_pooling=True)
+
+        layer_flat, num_features = self.flatten_layer(layer_conv4)
 
 
-        flatten = tf.contrib.layers.flatten(conv4_a)
-        # first dense layer + relu + dropout
-        fc1 = tf.contrib.layers.fully_connected(flatten, 400, activation_fn=tf.nn.relu)
-        fc1_drop = tf.nn.dropout(fc1, 0.8)
-        # second dense layer + relu:
-        fc2 = tf.contrib.layers.fully_connected(fc1_drop, 400, activation_fn=tf.nn.relu)
-        fc2_drop = tf.nn.dropout(fc2, 0.8)
-        # third dense layer + relu
-        fc3 = tf.contrib.layers.fully_connected(fc2_drop, 50, activation_fn=tf.nn.relu)
+        layer_fc1 = self.new_fc_layer(input=layer_flat,
+                         			 num_inputs=num_features,
+                         			 num_outputs=self.fc_size,
+                         			 use_relu=True)
 
-        # LSTM layer
-        a_lstm = tf.nn.rnn_cell.LSTMCell(num_units=256)
-        a_lstm = tf.nn.rnn_cell.DropoutWrapper(a_lstm, output_keep_prob=0.8)
-        a_lstm = tf.nn.rnn_cell.MultiRNNCell(cells=[a_lstm])
+        layer_fc2 = self.new_fc_layer(input=layer_fc1,
+                         			 num_inputs=self.fc_size,
+                         			 num_outputs=self.num_classes,
+                         			 use_relu=False)
 
-        a_init_state = a_lstm.zero_state(batch_size=batch_size, dtype=tf.float32)
-        lstm_in = tf.expand_dims(fc3, axis=1)
+        self.y_pred = tf.nn.softmax(layer_fc2)
 
-        a_outputs, a_final_state = tf.nn.dynamic_rnn(cell=a_lstm, inputs=lstm_in, initial_state=a_init_state)
-        a_cell_out = tf.reshape(a_outputs, [-1, 256], name='flatten_lstm_outputs')
+        self.y_pred_cls = tf.argmax(self.y_pred, axis=1)
 
-        # output layer:
-        self.output = tf.contrib.layers.fully_connected(a_cell_out, 5, activation_fn=None)
-        # Loss
-        self.cost = tf.reduce_mean(tf.losses.mean_squared_error(predictions=self.output, labels=self.y_label))
-        # accuracy
+        cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=layer_fc2, labels=self.y_true)
 
-        # optimizer
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cost)
-        # Start tensorflow session
-        self.sess = tf.Session()
+        self.cost = tf.reduce_mean(cross_entropy)
+
+        self.optimizer = tf.train.AdamOptimizer(self.learning_rate).minimize(self.cost)
+
+        self.correct_prediction = tf.equal(self.y_pred_cls, y_true_cls)
+
+        self.accuracy = tf.reduce_mean(tf.cast(self.correct_prediction, tf.float32))
+
+        self.session = tf.Session()
 
         self.saver = tf.train.Saver()
 
+    def setup_single_variable(self, name, default):
+
+        var = input(name + " ( default: \"" + str(default) + "\"): ")
+        if not var:
+                var = default
+
+        return var
+
+    def setup_convolutional_layer(self, default_filter_size, default_num_filters, number):
+
+        print("----- CONVOLUTION LAYER %s -----" % number)
+
+        filter_size = self.setup_single_variable(name="Filter size", default=default_filter_size)
+        num_filters = self.setup_single_variable(name="# of filters", default=default_num_filters)
+
+        return filter_size, num_filters
+
+    def set_parameters(self):
+
+        # The number of pixels in each dimension of an image.
+        self.img_size = self.setup_single_variable(name = "Image size", default=96)
+
+        # Tuple with height and width of images used to reshape arrays.
+        self.img_shape = (self.img_size, self.img_size)
+
+        # The images are stored in one-dimensional arrays of this length.
+        self.img_size_flat = self.img_shape[0] * self.img_shape[1]
+
+        # Number of classes, one class for each of 5 actions.
+        self.num_classes = self.setup_single_variable(name = "# of classes", default=5)
+	
+        # Learning rate.
+        self.learning_rate = self.setup_single_variable(name = "Learning rate", default=3e-4)
+
+        # Convolutional Layer 1.
+        self.filter_size1, self.num_filters1 = self.setup_convolutional_layer(default_filter_size=3, default_num_filters=16, number=1)
+
+        # Convolutional Layer 2.
+        self.filter_size2, self.num_filters2 = self.setup_convolutional_layer(default_filter_size=3, default_num_filters=32, number=2)        
+
+        # Convolutional Layer 3.
+        self.filter_size3, self.num_filters3 = self.setup_convolutional_layer(default_filter_size=3, default_num_filters=32, number=3) 
+
+        # Convolutional Layer 4.
+        self.filter_size4, self.num_filters4 = self.setup_convolutional_layer(default_filter_size=3, default_num_filters=32, number=4)         
+
+        # Fully-connected layer.
+        self.fc_size = self.setup_single_variable(name = "# of neurons in fully connected layer", default=128)
+
+    def new_weights(self, shape):
+        return tf.Variable(tf.truncated_normal(shape, stddev=0.05))
+
+    def new_biases(self, length):
+    	return tf.Variable(tf.constant(0.05, shape=[length]))
+
+    def new_conv_layer(self,
+                       input,              # The previous layer.
+		               num_input_channels, # Num. channels in prev. layer.
+		               filter_size,        # Width and height of each filter.
+		               num_filters,        # Number of filters.
+		               use_pooling=True):  # Use 2x2 max-pooling.
+
+		# Shape of the filter-weights for the convolution.
+		# This format is determined by the TensorFlow API.
+        shape = [filter_size, filter_size, num_input_channels, num_filters]
+
+		# Create new weights aka. filters with the given shape.
+        weights = self.new_weights(shape=shape)
+
+		# Create new biases, one for each filter.
+        biases = self.new_biases(length=num_filters)
+
+		# Create the TensorFlow operation for convolution.
+		# Note the strides are set to 1 in all dimensions.
+		# The first and last stride must always be 1,
+		# because the first is for the image-number and
+		# the last is for the input-channel.
+		# But e.g. strides=[1, 2, 2, 1] would mean that the filter
+		# is moved 2 pixels across the x- and y-axis of the image.
+		# The padding is set to 'SAME' which means the input image
+		# is padded with zeroes so the size of the output is the same.
+        layer = tf.nn.conv2d(input=input,
+		                     filter=weights,
+		                     strides=[1, 1, 1, 1],
+		                     padding='SAME')
+
+		# Add the biases to the results of the convolution.
+		# A bias-value is added to each filter-channel.
+        layer += biases
+
+		# Use pooling to down-sample the image resolution?
+        if use_pooling:
+		    # This is 2x2 max-pooling, which means that we
+		    # consider 2x2 windows and select the largest value
+		    # in each window. Then we move 2 pixels to the next window.
+                layer = tf.nn.max_pool(value=layer,
+		                           ksize=[1, 2, 2, 1],
+		                           strides=[1, 2, 2, 1],
+		                           padding='SAME')
+
+		# Rectified Linear Unit (ReLU).
+		# It calculates max(x, 0) for each input pixel x.
+		# This adds some non-linearity to the formula and allows us
+		# to learn more complicated functions.
+        layer = tf.nn.relu(layer)
+
+		# Note that ReLU is normally executed before the pooling,
+		# but since relu(max_pool(x)) == max_pool(relu(x)) we can
+		# save 75% of the relu-operations by max-pooling first.
+
+		# We return both the resulting layer and the filter-weights
+		# because we will plot the weights later.
+        return layer, weights
+
+    def flatten_layer(self, layer):
+		# Get the shape of the input layer.
+        layer_shape = layer.get_shape()
+
+		# The shape of the input layer is assumed to be:
+		# layer_shape == [num_images, img_height, img_width, num_channels]
+
+		# The number of features is: img_height * img_width * num_channels
+		# We can use a function from TensorFlow to calculate this.
+        num_features = layer_shape[1:4].num_elements()
+		
+		# Reshape the layer to [num_images, num_features].
+		# Note that we just set the size of the second dimension
+		# to num_features and the size of the first dimension to -1
+		# which means the size in that dimension is calculated
+		# so the total size of the tensor is unchanged from the reshaping.
+        layer_flat = tf.reshape(layer, [-1, num_features])
+
+		# The shape of the flattened layer is now:
+		# [num_images, img_height * img_width * num_channels]
+
+		# Return both the flattened layer and the number of features.
+        return layer_flat, num_features
+
+    def new_fc_layer(self,
+                     input,          # The previous layer.
+		             num_inputs,     # Num. inputs from prev. layer.
+		             num_outputs,    # Num. outputs.
+		             use_relu=True): # Use Rectified Linear Unit (ReLU)?
+
+		# Create new weights and biases.
+        weights = self.new_weights(shape=[num_inputs, num_outputs])
+        biases = self.new_biases(length=num_outputs)
+
+		# Calculate the layer as the matrix multiplication of
+		# the input and weights, and then add the bias-values.
+        layer = tf.matmul(input, weights) + biases
+
+		# Use ReLU?
+        if use_relu:
+                layer = tf.nn.relu(layer)
+
+        return layer
+
     def load(self, file_name):
-        self.saver.restore(self.sess, file_name)
+        self.saver.restore(self.session, file_name)
 
     def save(self, file_name):
-        self.saver.save(self.sess, file_name)
+        self.saver.save(self.session, file_name)
