@@ -58,7 +58,7 @@ def reshape_to_history_length(x, history_length):
     for i in range(batch_size - history_length):
         temp[i, :, :, :] = np.transpose(x[i: i + history_length, :, :, 0], (1, 2, 0))
 
-    return tmep
+    return temp
 
 def make_it_hot(y, dtype = np.int8):
 
