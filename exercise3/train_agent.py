@@ -32,8 +32,8 @@ def read_data(datasets_dir = "./data", frac = 0.1):
     X_valid, y_valid = X[int((1 - frac) * n_samples):], y[int((1 - frac) * n_samples):]
 
     print("Size of:")
-    print("- Training-set:\t\t{}".format(X_train.shape[0] + y_train.shape[0]))
-    print("- Validation-set:\t{}".format(X_valid.shape[0] + y_valid.shape[0]))
+    print("- Training-set:\t\t{}".format(X_train.shape[0]))
+    print("- Validation-set:\t{}".format(X_valid.shape[0]))
 
     return X_train, y_train, X_valid, y_valid
 
@@ -90,6 +90,68 @@ def use_history(history_length, X_train, y_train, X_valid, y_valid):
     y_valid[history_length] = y_valid[history_length - 1:]
 
     return X_train, y_train, X_valid, y_valid
+def uniform_sampling(X, y, num_samples, history_length = 1, use_history = False):
+  
+  n = y.shape[0]
+  weights = np.zeros(n)
+  
+  straight = []
+  left = []
+  right = []
+  accelerate = []
+  brake = []
+  
+  for i in range(n):
+    if (y[i] == [1., 0., 0., 0., 0.]).all():
+      straight.append(i)
+    elif (y[i] == [0., 1., 0., 0., 0.]).all():
+      left.append(i)
+    elif (y[i] == [0., 0., 1., 0., 0.]).all():
+      right.append(i)
+    elif (y[i] == [0., 0., 0., 1., 0.]).all():
+      accelerate.append(i)
+    elif (y[i] == [0., 0., 0., 0., 1.]).all():
+      brake.append(i)
+  
+  straight_weight = n / len(straight) if (len(straight) != 0) else 1
+  left_weight = n / len(left) if (len(left) != 0) else 1
+  right_weight = n / len(right) if (len(right) != 0) else 1
+  accelerate_weight = n / len(accelerate) if (len(accelerate) != 0) else 1
+  brake_weight = n / len(brake) if (len(brake) != 0) else 1
+  
+  sum_weight = straight_weight + left_weight + right_weight + accelerate_weight + brake_weight
+  straight_weight /= sum_weight
+  left_weight /= sum_weight
+  right_weight /= sum_weight
+  accelerate_weight /= sum_weight
+  brake_weight /= sum_weight
+  
+#   print("straight weight: ", straight_weight)
+#   print("left weight: ", left_weight)
+#   print("right weight: ", right_weight)
+#   print("accelerate weight: ", accelerate_weight)
+#   print("brake weight: ", brake_weight)
+
+  weights[straight] = straight_weight
+  weights[left] = left_weight
+  weights[right] = right_weight
+  weights[accelerate] = accelerate_weight
+  weights[brake] = brake_weight
+
+  weights /= np.sum(weights)
+    
+  zipped = np.array(list(zip(X ,y)))
+    
+  chosen_indices = np.random.choice(np.arange(n), num_samples, replace = False, p = weights)
+  
+  if use_history:
+    chosen_indices = np.array([range(i - history_length, i, 1) for i in chosen_indices]).flatten() 
+  
+  zipped = zipped[chosen_indices]
+      
+  X, y = zip(*zipped)
+
+  return np.array(X), np.array(y)
 
 def preprocessing(X_train, y_train, X_valid, y_valid, history_length = 1, onehot = True):
 
@@ -145,7 +207,7 @@ def count_output_data_hot_instances(y, j = ''):
 
 def train_model(X_train, y_train,
                 X_valid, y_valid,
-                n_minibatches, batch_size,
+                epochs, batch_size,
                 lr,
                 history_length = 1,
                 model_dir = "./models", tensorboard_dir = "./tensorboard"):
@@ -161,6 +223,21 @@ def train_model(X_train, y_train,
     X_valid = reshape_input_data(X_valid)
     print("... input data reshaped")
 
+    #y_train = np.zeros((y_train_hot.shape[0], 3))
+
+    #for i in range(y_train_hot.shape[0]):
+    #    if (y_train_hot[i] == [1., 0., 0., 0., 0.]).all():
+    #        y_train[i] = [0.0, 0.0, 0.0] 
+    #    if (y_train_hot[i] == [0., 1., 0., 0., 0.]).all():
+    #        y_train[i] = [-1.0, 0.0, 0.0] 
+    #    if (y_train_hot[i] == [0., 0., 1., 0., 0.]).all():
+    #        y_train[i] = [1.0, 0.0, 0.0] 
+    #    if (y_train_hot[i] == [0., 0., 0., 1., 0.]).all():
+    #        y_train[i] = [0.0, 1.0, 0.0] 
+    #    if (y_train_hot[i] == [0., 0., 0., 0., 1.]).all():
+    #        y_train[i] = [0.0, 0.0, 0.2] 
+
+
     agent = Model(batch_size = batch_size, history_length = history_length)
     print("... model created")
 
@@ -171,13 +248,13 @@ def train_model(X_train, y_train,
     tf.reset_default_graph()
     print("... model initialized")
 
-    training_accuracy = np.zeros((n_minibatches))
-    #validation_cost = np.zeros((n_minibatches))
+    training_accuracy = np.zeros((epochs))
+    validation_accuracy = np.zeros((epochs))
 
     os.system('clear')
     print("... train model")
     # training loop
-    for i in range(n_minibatches):
+    for i in range(epochs):
 
         first_index, last_index = get_minibatch_indices(X_train.shape[0], batch_size, history_length)
 
@@ -190,13 +267,18 @@ def train_model(X_train, y_train,
         if i % when_to_show == 0:
             # Calculate the accuracy on the training-set.
             training_accuracy[i] += agent.session.run(agent.accuracy, feed_dict=feed_dict_train)
+            feed_dict_valid = {agent.x: X_valid, agent.y_true: y_valid}
+            validation_accuracy[i] += agent.session.run(agent.accuracy, feed_dict=feed_dict_valid)
 
             # Message for printing.
             msg = "Optimization Iteration: {0:>6}, Training Accuracy: {1:>6.1%}"
+            msg_valid = "Optimization Iteration: {0:>6}, Validation Accuracy: {1:>6.1%}"
 
             # Print it.
             print(msg.format(i + 1, training_accuracy[i]))
-            count_output_data_hot_instances(y_train_mini, i)
+            print(msg_valid.format(i + 1, validation_accuracy[i]))
+            #if i % (5 * when_to_show) == 0:
+             #   count_output_data_hot_instances(y_train_mini, i)
 
         # compute training/ validation accuracy and loss for the batch and visualize them with tensorboard. You can watch the progress of
         #    your training in your web browser
@@ -213,23 +295,28 @@ def train_model(X_train, y_train,
 if __name__ == "__main__":
 
     history_length = int(input("Set history length (>= 1): "))
+    use_h = False
 
     # read data
     X_train, y_train, X_valid, y_valid = read_data("./data")
     print("... data read")
 
-    X_train, y_train = shuffle_data(X_train, y_train)
-    X_valid, y_valid = shuffle_data(X_valid, y_valid)
-    print("... data shuffled")
+    offset = int(X_train.shape[0] / 3)
+
+    if not use_h:
+      X_train, y_train = shuffle_data(X_train, y_train)
+      X_valid, y_valid = shuffle_data(X_valid, y_valid)
+      print("... data shuffled")
 
     # preprocess data
     X_train, y_train_hot, X_valid, y_valid_hot = preprocessing(X_train, y_train, X_valid, y_valid, history_length = history_length)
     print("... data preprocessed")
 
-    count_output_data_hot_instances(y_train_hot)
-    count_output_data_hot_instances(y_valid_hot)
+    X_train, y_train_hot = uniform_sampling(X_train, y_train_hot, offset, history_length, use_history = use_h)
+       
+    #count_output_data_hot_instances(y_train_hot)
 
     train_model(X_train, y_train_hot,
                 X_valid, y_valid_hot,
                 history_length = history_length,
-                n_minibatches = 10000, batch_size = 64, lr = 0.0004)
+                epochs = 10000, batch_size = 64, lr = 0.0004)
