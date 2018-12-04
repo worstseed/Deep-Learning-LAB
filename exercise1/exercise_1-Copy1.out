@@ -1,0 +1,7 @@
+\BOOKMARK [1][-]{section.1}{First exercise: Classifying MNIST with MLPs}{}% 1
+\BOOKMARK [1][-]{section.2}{Data Loading}{}% 2
+\BOOKMARK [1][-]{section.3}{Neural Network Layers}{}% 3
+\BOOKMARK [1][-]{section.4}{Neural Network class}{}% 4
+\BOOKMARK [1][-]{section.5}{Gradient Checking}{}% 5
+\BOOKMARK [1][-]{section.6}{Training on MNIST}{}% 6
+\BOOKMARK [1][-]{section.7}{Figure out a reasonable Network that achieves good performance}{}% 7
