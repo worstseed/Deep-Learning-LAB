@@ -279,7 +279,7 @@ def train_model(X_train, y_train,
             log_dir = "./log/" + str(history_length) + "/"
             save_path = os.path.join(model_dir, "logg")
             full_path = save_path + '.txt'
-            f = open(name, "a")
+            f = open(full_path, "a")
             f.write(msg.format(i + 1, training_accuracy[i], validation_accuracy[i]))
 
         # eval_dict = {"train":training_cost[i], "valid":validation_cost[i]}
