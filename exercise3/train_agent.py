@@ -284,6 +284,11 @@ def train_model(X_train, y_train,
 
         # eval_dict = {"train":training_cost[i], "valid":validation_cost[i]}
         # tensorboard_eval.write_episode_data(i, eval_dict)
+   # print("validation accuracy: ", validation_accuracy)    
+   # plt.plot(validation_accuracy)
+   # plot.xlabel("Epoch")
+   # plot.ylabel("Accuracy")
+   # plt.savefig(str(datatime.datatime.now()) + "_validation_accuracy" + ".png")
 
     # save your agent
     save_path = os.path.join(model_dir, "agent.ckpt")
@@ -315,4 +320,4 @@ if __name__ == "__main__":
                 X_valid, y_valid_hot,
                 history_length = history_length,
                 set_to_default = True,
-                epochs = 100000, batch_size = 256, lr = 0.000001)
+                epochs = 5000, batch_size = 256, lr = 0.00001)

@@ -1,0 +1,10 @@
+Optimization Iteration:      1, Training Accuracy:   0.0%, Validation Accuracy:   0.0% 
+Optimization Iteration:      2, Training Accuracy:   0.0%, Validation Accuracy:   0.2% 
+Optimization Iteration:      3, Training Accuracy:   0.0%, Validation Accuracy:   0.2% 
+Optimization Iteration:      4, Training Accuracy:   1.6%, Validation Accuracy:   0.2% 
+Optimization Iteration:      5, Training Accuracy:   4.7%, Validation Accuracy:   1.6% 
+Optimization Iteration:      6, Training Accuracy:  13.7%, Validation Accuracy:   4.0% 
+Optimization Iteration:      7, Training Accuracy:  16.8%, Validation Accuracy:   6.1% 
+Optimization Iteration:      8, Training Accuracy:  22.3%, Validation Accuracy:   7.5% 
+Optimization Iteration:      9, Training Accuracy:  25.4%, Validation Accuracy:   8.3% 
+Optimization Iteration:     10, Training Accuracy:  27.0%, Validation Accuracy:   9.1% 
