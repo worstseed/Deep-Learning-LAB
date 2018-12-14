@@ -276,7 +276,9 @@ def train_model(X_train, y_train,
             msg = "Optimization Iteration: {0:>6}, Training Accuracy: {1:>6.1%}, Validation Accuracy: {2:>6.1%} \n"
             print(msg.format(i + 1, training_accuracy[i], validation_accuracy[i]))
 
-            name = str(history_length) + '.txt'
+            log_dir = "./log/" + str(history_length) + "/"
+            save_path = os.path.join(model_dir, "logg")
+            full_path = save_path '.txt'
             f = open(name, "a")
             f.write(msg.format(i + 1, training_accuracy[i], validation_accuracy[i]))
 
