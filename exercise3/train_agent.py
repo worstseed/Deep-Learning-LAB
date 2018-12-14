@@ -270,8 +270,12 @@ def train_model(X_train, y_train,
             feed_dict_valid = {agent.x: X_valid, agent.y_true: y_valid}
             validation_accuracy[i] += agent.session.run(agent.accuracy, feed_dict=feed_dict_valid)
 
-            msg = "Optimization Iteration: {0:>6}, Training Accuracy: {1:>6.1%}, Validation Accuracy: {2:>6.1%}"
+            msg = "Optimization Iteration: {0:>6}, Training Accuracy: {1:>6.1%}, Validation Accuracy: {2:>6.1%} \n"
             print(msg.format(i + 1, training_accuracy[i], validation_accuracy[i]))
+
+            name = str(history_length) + '.txt'
+            f = open(name, "a")
+            f.write(msg.format(i + 1, training_accuracy[i], validation_accuracy[i])) 
 
         # eval_dict = {"train":training_cost[i], "valid":validation_cost[i]}
         # tensorboard_eval.write_episode_data(i, eval_dict)
@@ -306,4 +310,4 @@ if __name__ == "__main__":
                 X_valid, y_valid_hot,
                 history_length = history_length,
                 set_to_default = True,
-                epochs = 10000, batch_size = 256, lr = 0.00001)
+                epochs = 5000, batch_size = 256, lr = 0.00001)
