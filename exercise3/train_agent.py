@@ -10,6 +10,7 @@ import tensorflow as tf
 from model import Model
 from utils import *
 from tensorboard_evaluation import Evaluation
+from random import randint
 
 def read_data(datasets_dir = "./data", frac = 0.1):
     """
@@ -56,7 +57,7 @@ def reshape_to_history_length(x, history_length):
     temp = np.empty((batch_size - history_length + 1, image_width, image_height, history_length))
 
     for i in range(batch_size - history_length):
-        temp[i, :, :, :] = np.transpose(x[i: i + history_length, :, :, 0], (1, 2, 0))
+        temp[i, :, :, :] = np.transpose(x[i: i + history_length, :, :], (1, 2, 0))
 
     return temp
 
@@ -84,23 +85,31 @@ def use_history(history_length, X_train, y_train, X_valid, y_valid):
     # History:
     # At first you should only use the current image as input to your network to learn the next action. Then the input states
     # have shape (96, 96,1). Later, add a history of the last N images to your state so that a state has shape (96, 96, N).
-    X_train = reshape_to_history_length(X_train, history_length)
-    y_train[history_length] = y_train[history_length - 1:]
-    X_valid = reshape_to_history_length(X_valid, history_length)
-    y_valid[history_length] = y_valid[history_length - 1:]
+    # X_train = reshape_to_history_length(X_train, history_length)
+    # y_train[history_length] = y_train[history_length - 1:]
 
-    return X_train, y_train, X_valid, y_valid
-def uniform_sampling(X, y, num_samples, history_length = 1, use_history = False):
-  
-  n = y.shape[0]
+    X = np.zeros((X_train.shape[0] - history_length, X_train.shape[1], X_train.shape[2], history_length))
+    y = y_train[history_length:]
+    X_v = np.zeros((X_valid.shape[0] - history_length, X_valid.shape[1], X_valid.shape[2], history_length))
+    y_v = y_valid[history_length:]
+
+    for i in range(history_length):
+        X[:, :, :, i] = np.reshape(X_train[i:X_train.shape[0] - history_length + i], (X_train.shape[0] - history_length, 96, 96))
+        X_v[:, :, :, i] = np.reshape(X_valid[i:X_valid.shape[0] - history_length + i], (X_valid.shape[0] - history_length, 96, 96))
+
+    return X, y, X_v, y_v
+
+def uniform_sampling(X, y, num_samples, history_length):
+
+  n = y.shape[0] // history_length
   weights = np.zeros(n)
-  
+
   straight = []
   left = []
   right = []
   accelerate = []
   brake = []
-  
+
   for i in range(n):
     if (y[i] == [1., 0., 0., 0., 0.]).all():
       straight.append(i)
@@ -112,25 +121,19 @@ def uniform_sampling(X, y, num_samples, history_length = 1, use_history = False)
       accelerate.append(i)
     elif (y[i] == [0., 0., 0., 0., 1.]).all():
       brake.append(i)
-  
+
   straight_weight = n / len(straight) if (len(straight) != 0) else 1
   left_weight = n / len(left) if (len(left) != 0) else 1
   right_weight = n / len(right) if (len(right) != 0) else 1
   accelerate_weight = n / len(accelerate) if (len(accelerate) != 0) else 1
   brake_weight = n / len(brake) if (len(brake) != 0) else 1
-  
+
   sum_weight = straight_weight + left_weight + right_weight + accelerate_weight + brake_weight
   straight_weight /= sum_weight
   left_weight /= sum_weight
   right_weight /= sum_weight
   accelerate_weight /= sum_weight
   brake_weight /= sum_weight
-  
-#   print("straight weight: ", straight_weight)
-#   print("left weight: ", left_weight)
-#   print("right weight: ", right_weight)
-#   print("accelerate weight: ", accelerate_weight)
-#   print("brake weight: ", brake_weight)
 
   weights[straight] = straight_weight
   weights[left] = left_weight
@@ -139,21 +142,30 @@ def uniform_sampling(X, y, num_samples, history_length = 1, use_history = False)
   weights[brake] = brake_weight
 
   weights /= np.sum(weights)
-    
+
   zipped = np.array(list(zip(X ,y)))
-    
-  chosen_indices = np.random.choice(np.arange(n), num_samples, replace = False, p = weights)
-  
-  if use_history:
-    chosen_indices = np.array([range(i - history_length, i, 1) for i in chosen_indices]).flatten() 
-  
+
+  # print("num_samples: {}, history_length: {}" .format(num_samples, history_length))
+  chosen_indices = np.random.choice(np.arange(n), num_samples // history_length, replace = True, p = weights)
+
+  # if history_length > 1:
+  #     # b = randint(0, chosen_indices.shape[0] - 64 - 1)
+  #     # batch_index = chosen_indices[b: b + num_samples]
+  #     X_temp = np.zeros((num_samples, X.shape[1], X.shape[2], history_length))
+  #     y_temp = np.zeros(num_samples)
+  #     for i in range(history_length):
+  #         X_temp[:, :, :, i] = X[chosen_indices + i]
+  #     y_temp[:] = y[chosen_indices + history_length - 1]
+  #         # chosen_indices = np.array([range(i - history_length, i, 1) for i in chosen_indices]).flatten()
+  #     zipped = np.array(list(zip(X_temp ,y_temp)))
+
   zipped = zipped[chosen_indices]
-      
+
   X, y = zip(*zipped)
 
   return np.array(X), np.array(y)
 
-def preprocessing(X_train, y_train, X_valid, y_valid, history_length = 1, onehot = True):
+def preprocessing(X_train, y_train, X_valid, y_valid, history_length, onehot = True):
 
     print("... preprocessing data")
 
@@ -172,8 +184,9 @@ def get_minibatch_indices(data_size, batch_size, history_length):
     first_index = np.random.randint(0, data_size - batch_size - history_length - 1)
     return first_index, (first_index + batch_size)
 
-def reshape_input_data(x):
-    return np.reshape(x, (x.shape[0], 96, 96, 1))
+def reshape_input_data(x, history_length):
+
+    return np.reshape(x, (x.shape[0], 96, 96, history_length))
 
 def count_output_data_hot_instances(y, j = ''):
 
@@ -209,7 +222,8 @@ def train_model(X_train, y_train,
                 X_valid, y_valid,
                 epochs, batch_size,
                 lr,
-                history_length = 1,
+                history_length,
+                set_to_default,
                 model_dir = "./models", tensorboard_dir = "./tensorboard"):
 
     # create result and model folders
@@ -219,26 +233,11 @@ def train_model(X_train, y_train,
 
     when_to_show = int(input("Show every x iteration: "))
 
-    X_train = reshape_input_data(X_train)
-    X_valid = reshape_input_data(X_valid)
+    X_train = reshape_input_data(X_train, history_length)
+    X_valid = reshape_input_data(X_valid, history_length)
     print("... input data reshaped")
 
-    #y_train = np.zeros((y_train_hot.shape[0], 3))
-
-    #for i in range(y_train_hot.shape[0]):
-    #    if (y_train_hot[i] == [1., 0., 0., 0., 0.]).all():
-    #        y_train[i] = [0.0, 0.0, 0.0] 
-    #    if (y_train_hot[i] == [0., 1., 0., 0., 0.]).all():
-    #        y_train[i] = [-1.0, 0.0, 0.0] 
-    #    if (y_train_hot[i] == [0., 0., 1., 0., 0.]).all():
-    #        y_train[i] = [1.0, 0.0, 0.0] 
-    #    if (y_train_hot[i] == [0., 0., 0., 1., 0.]).all():
-    #        y_train[i] = [0.0, 1.0, 0.0] 
-    #    if (y_train_hot[i] == [0., 0., 0., 0., 1.]).all():
-    #        y_train[i] = [0.0, 0.0, 0.2] 
-
-
-    agent = Model(batch_size = batch_size, history_length = history_length)
+    agent = Model(batch_size = batch_size, history_length = history_length, set_to_default = set_to_default)
     print("... model created")
 
     # tensorboard_eval = Evaluation(tensorboard_dir)
@@ -265,24 +264,15 @@ def train_model(X_train, y_train,
         agent.session.run(agent.optimizer, feed_dict=feed_dict_train)
 
         if i % when_to_show == 0:
+
             # Calculate the accuracy on the training-set.
             training_accuracy[i] += agent.session.run(agent.accuracy, feed_dict=feed_dict_train)
             feed_dict_valid = {agent.x: X_valid, agent.y_true: y_valid}
             validation_accuracy[i] += agent.session.run(agent.accuracy, feed_dict=feed_dict_valid)
 
-            # Message for printing.
-            msg = "Optimization Iteration: {0:>6}, Training Accuracy: {1:>6.1%}"
-            msg_valid = "Optimization Iteration: {0:>6}, Validation Accuracy: {1:>6.1%}"
+            msg = "Optimization Iteration: {0:>6}, Training Accuracy: {1:>6.1%}, Validation Accuracy: {2:>6.1%}"
+            print(msg.format(i + 1, training_accuracy[i], validation_accuracy[i]))
 
-            # Print it.
-            print(msg.format(i + 1, training_accuracy[i]))
-            print(msg_valid.format(i + 1, validation_accuracy[i]))
-            #if i % (5 * when_to_show) == 0:
-             #   count_output_data_hot_instances(y_train_mini, i)
-
-        # compute training/ validation accuracy and loss for the batch and visualize them with tensorboard. You can watch the progress of
-        #    your training in your web browser
-            
         # eval_dict = {"train":training_cost[i], "valid":validation_cost[i]}
         # tensorboard_eval.write_episode_data(i, eval_dict)
 
@@ -295,28 +285,25 @@ def train_model(X_train, y_train,
 if __name__ == "__main__":
 
     history_length = int(input("Set history length (>= 1): "))
-    use_h = False
 
-    # read data
     X_train, y_train, X_valid, y_valid = read_data("./data")
     print("... data read")
 
-    offset = int(X_train.shape[0] / 3)
+    data_used = X_train.shape[0] // 3
 
-    if not use_h:
+    if history_length == 1:
       X_train, y_train = shuffle_data(X_train, y_train)
       X_valid, y_valid = shuffle_data(X_valid, y_valid)
       print("... data shuffled")
 
-    # preprocess data
     X_train, y_train_hot, X_valid, y_valid_hot = preprocessing(X_train, y_train, X_valid, y_valid, history_length = history_length)
     print("... data preprocessed")
 
-    X_train, y_train_hot = uniform_sampling(X_train, y_train_hot, offset, history_length, use_history = use_h)
-       
-    #count_output_data_hot_instances(y_train_hot)
+    X_train, y_train_hot = uniform_sampling(X_train, y_train_hot, data_used, history_length)
+    print("... performed uniform sampling")
 
     train_model(X_train, y_train_hot,
                 X_valid, y_valid_hot,
                 history_length = history_length,
-                epochs = 10000, batch_size = 64, lr = 0.0004)
+                set_to_default = True,
+                epochs = 10000, batch_size = 256, lr = 0.00001)

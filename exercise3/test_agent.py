@@ -29,26 +29,21 @@ def run_episode(env, agent, rendering=True, max_timesteps=1000, history_length =
         # get the action from your agent! If you use discretized actions you need to transform them to continuous
         # actions again. a needs to have a shape like np.array([0.0, 0.0, 0.0])
         a = agent.session.run(agent.y_pred, feed_dict={agent.x:state_history})[0]
-        
-        #print("a; ", a)
-        if step < 3:
+
+        a_id = np.where(a==max(a))
+
+        if (a_id[0] == 0):
+           a = [0.0, 0.0, 0.0]
+        elif (a_id[0] == 1):
+           a = [-1.0, 0.0, 0.0]
+        elif (a_id[0] == 2):
+           a = [1.0, 0.0, 0.0]
+        elif (a_id[0] == 3):
+           a = [0.0, 1.0, 0.0]
+        else:
            a = [0.0, 0.0, 0.2]
-           
-        #a_id = np.where(a==max(a))
-                        
-        #if (a_id == 0):
-        #    a = [0.0, 0.0, 0.0]
-        #elif (a_id == 1):
-        #    a = [-1.0, 0.0, 0.0]
-        #elif (a_id == 2):
-        #    a = [1.0, 0.0, 0.0]
-        #elif (a_id == 3):
-        #    a = [0.0, 1.0, 0.0]
-        #else:
-        #    a = [0.0, 0.0, 0.2]
-        
-        print("a after; ", a)
-        
+
+
         next_state, r, done, info = env.step(a)
         episode_reward += r
         state = next_state
@@ -73,15 +68,13 @@ if __name__ == "__main__":
     # important: don't set rendering to False for evaluation (you may get corrupted state images from gym)
     rendering = True
 
-    n_test_episodes = 15                  # number of episodes to test
+    n_test_episodes = 15
 
     # load agent
-    agent = Model(history_length = history_length, set_to_default=True)
+    agent = Model(history_length = history_length, set_to_default = True)
     agent.load("models/agent.ckpt")
 
     env = gym.make('CarRacing-v0').unwrapped
-
-    print("xd: ", env.action_space.sample())
 
     episode_rewards = []
     for i in range(n_test_episodes):
