@@ -226,7 +226,7 @@ def train_model(X_train, y_train,
                 history_length,
                 set_to_default,
                 model_dir = "./models", tensorboard_dir = "./tensorboard"):
-    
+
     model_dir = "./models/" + str(history_length) + "/" + str(datetime.datetime.now())
 
     # create result and model folders
@@ -278,7 +278,7 @@ def train_model(X_train, y_train,
 
             name = str(history_length) + '.txt'
             f = open(name, "a")
-            f.write(msg.format(i + 1, training_accuracy[i], validation_accuracy[i])) 
+            f.write(msg.format(i + 1, training_accuracy[i], validation_accuracy[i]))
 
         # eval_dict = {"train":training_cost[i], "valid":validation_cost[i]}
         # tensorboard_eval.write_episode_data(i, eval_dict)
@@ -313,8 +313,4 @@ if __name__ == "__main__":
                 X_valid, y_valid_hot,
                 history_length = history_length,
                 set_to_default = True,
-<<<<<<< HEAD
                 epochs = 100000, batch_size = 512, lr = 0.000001)
-=======
-                epochs = 5000, batch_size = 256, lr = 0.00001)
->>>>>>> 20a2ef89b624c80868d7d290d23c6b5d7a87756b
