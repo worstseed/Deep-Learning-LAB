@@ -313,4 +313,4 @@ if __name__ == "__main__":
                 X_valid, y_valid_hot,
                 history_length = history_length,
                 set_to_default = True,
-                epochs = 100000, batch_size = 512, lr = 0.000001)
+                epochs = 100000, batch_size = 256, lr = 0.000001)
