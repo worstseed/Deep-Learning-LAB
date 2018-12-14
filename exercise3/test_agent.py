@@ -9,8 +9,6 @@ import json
 from model import Model
 from utils import *
 
-history_length = 1
-
 def run_episode(env, agent, rendering=True, max_timesteps=1000, history_length = 1):
 
     episode_reward = 0

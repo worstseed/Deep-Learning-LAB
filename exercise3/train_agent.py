@@ -6,6 +6,7 @@ import os
 import gzip
 import matplotlib.pyplot as plt
 import tensorflow as tf
+import datetime
 
 from model import Model
 from utils import *
@@ -225,6 +226,8 @@ def train_model(X_train, y_train,
                 history_length,
                 set_to_default,
                 model_dir = "./models", tensorboard_dir = "./tensorboard"):
+    
+    model_dir = "./models/" + str(history_length) + "/" + str(datetime.datetime.now())
 
     # create result and model folders
     if not os.path.exists(model_dir):
@@ -306,4 +309,4 @@ if __name__ == "__main__":
                 X_valid, y_valid_hot,
                 history_length = history_length,
                 set_to_default = True,
-                epochs = 10000, batch_size = 256, lr = 0.00001)
+                epochs = 100000, batch_size = 512, lr = 0.000001)
