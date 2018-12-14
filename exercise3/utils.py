@@ -39,6 +39,6 @@ def action_to_id(a):
     elif all(a == [1.0, 0.0, 0.0]): return RIGHT             # RIGHT: 2
     elif all(a == [0.0, 1.0, 0.0]): return ACCELERATE        # ACCELERATE: 3
     elif all(a == [0.0, 0.0, 0.2]): return BRAKE             # BRAKE: 4
-    #elif all(a == [0.0, 0.0, 0.0]): return ACCELERATE if random.random() < 0.2 else STRAIGHT 
+    elif all(a == [0.0, 0.0, 0.0]): return ACCELERATE if random.random() < 0.1 else STRAIGHT 
     else:
         return STRAIGHT                                      # STRAIGHT = 0

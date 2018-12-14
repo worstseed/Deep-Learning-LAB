@@ -126,10 +126,10 @@ class Model:
         self.filter_size2, self.num_filters2 = self.setup_convolutional_layer(default_filter_size=3, default_num_filters=32, number=2, set_to_default=set_to_default)
 
         # Convolutional Layer 3.
-        self.filter_size3, self.num_filters3 = self.setup_convolutional_layer(default_filter_size=3, default_num_filters=32, number=3, set_to_default=set_to_default)
+        self.filter_size3, self.num_filters3 = self.setup_convolutional_layer(default_filter_size=3, default_num_filters=64, number=3, set_to_default=set_to_default)
 
         # Convolutional Layer 4.
-        self.filter_size4, self.num_filters4 = self.setup_convolutional_layer(default_filter_size=3, default_num_filters=32, number=4, set_to_default=set_to_default)
+        self.filter_size4, self.num_filters4 = self.setup_convolutional_layer(default_filter_size=3, default_num_filters=64, number=4, set_to_default=set_to_default)
 
         # Fully-connected layer.
         self.fc_size = self.setup_single_variable(name = "# of neurons in fully connected layer", default=128, set_to_default=set_to_default)
