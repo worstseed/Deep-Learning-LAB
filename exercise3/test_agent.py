@@ -71,13 +71,14 @@ if __name__ == "__main__":
 
     # important: don't set rendering to False for evaluation (you may get corrupted state images from gym)
     rendering = True
-    n_test_episodes = 5
+    n_test_episodes = 15
     batch_size = 256
-    history_length = 5
+    history_length = 3
 
     # load agent
     agent = Model(history_length = history_length, batch_size = batch_size, set_to_default = True)
-    agent.load("models/agent.ckpt")
+    # agent.load("models/agent.ckpt")
+    agent.load("models/3/exp2/agent.ckpt")
 
     env = gym.make('CarRacing-v0').unwrapped
 
