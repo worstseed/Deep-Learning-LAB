@@ -117,7 +117,7 @@ class Model:
         self.num_classes = self.setup_single_variable(name = "# of classes", default=5, set_to_default=set_to_default)
 
         # Learning rate.
-        self.learning_rate = self.setup_single_variable(name = "Learning rate", default=0.00001, set_to_default=set_to_default)
+        self.learning_rate = self.setup_single_variable(name = "Learning rate", default=0.000001, set_to_default=set_to_default)
 
         # Convolutional Layer 1.
         self.filter_size1, self.num_filters1 = self.setup_convolutional_layer(default_filter_size=3, default_num_filters=16, number=1, set_to_default=set_to_default)

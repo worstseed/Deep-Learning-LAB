@@ -320,4 +320,4 @@ if __name__ == "__main__":
                 X_valid, y_valid_hot,
                 history_length = history_length,
                 set_to_default = True,
-                epochs = 5000, batch_size = 256, lr = 0.00001)
+                epochs = 5000, batch_size = 256, lr = 0.000001)
