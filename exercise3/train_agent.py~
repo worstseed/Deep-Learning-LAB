@@ -147,7 +147,7 @@ def uniform_sampling(X, y, num_samples, history_length):
   zipped = np.array(list(zip(X ,y)))
 
   # print("num_samples: {}, history_length: {}" .format(num_samples, history_length))
-  chosen_indices = np.random.choice(np.arange(n), num_samples // history_length, replace = True, p = weights)
+  chosen_indices = np.random.choice(np.arange(n), num_samples // history_length, replace = False, p = weights)
 
   # if history_length > 1:
   #     # b = randint(0, chosen_indices.shape[0] - 64 - 1)
@@ -284,7 +284,7 @@ def train_model(X_train, y_train,
 
         # eval_dict = {"train":training_cost[i], "valid":validation_cost[i]}
         # tensorboard_eval.write_episode_data(i, eval_dict)
-   # print("validation accuracy: ", validation_accuracy)    
+   # print("validation accuracy: ", validation_accuracy)
    # plt.plot(validation_accuracy)
    # plot.xlabel("Epoch")
    # plot.ylabel("Accuracy")
@@ -320,4 +320,4 @@ if __name__ == "__main__":
                 X_valid, y_valid_hot,
                 history_length = history_length,
                 set_to_default = True,
-                epochs = 10, batch_size = 256, lr = 0.000001)
+                epochs = 5000, batch_size = 256, lr = 0.000001)
