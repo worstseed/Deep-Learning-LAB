@@ -243,10 +243,9 @@ def train_model(X_train, y_train,
     agent = Model(batch_size = batch_size, history_length = history_length, set_to_default = set_to_default)
     print("... model created")
 
-    # tensorboard_eval = Evaluation(tensorboard_dir)
-
     # Initialization
     agent.session.run(tf.global_variables_initializer())
+    tensorboard_eval = Evaluation(tensorboard_dir)
     tf.reset_default_graph()
     print("... model initialized")
 
@@ -282,13 +281,8 @@ def train_model(X_train, y_train,
             f = open(full_path, "a")
             f.write(msg.format(i + 1, training_accuracy[i], validation_accuracy[i]))
 
-        # eval_dict = {"train":training_cost[i], "valid":validation_cost[i]}
-        # tensorboard_eval.write_episode_data(i, eval_dict)
-   # print("validation accuracy: ", validation_accuracy)
-   # plt.plot(validation_accuracy)
-   # plot.xlabel("Epoch")
-   # plot.ylabel("Accuracy")
-   # plt.savefig(str(datatime.datatime.now()) + "_validation_accuracy" + ".png")
+            eval_dict = {"train":training_accuracy[i], "valid":validation_accuracy[i]}
+            tensorboard_eval.write_episode_data(i, eval_dict)
 
     # save your agent
     save_path = os.path.join(model_dir, "agent.ckpt")
@@ -320,4 +314,4 @@ if __name__ == "__main__":
                 X_valid, y_valid_hot,
                 history_length = history_length,
                 set_to_default = True,
-                epochs = 5000, batch_size = 256, lr = 0.0001)
+                epochs = 2000, batch_size = 256, lr = 0.0001)
