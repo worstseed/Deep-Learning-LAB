@@ -1,0 +1,1 @@
+Optimization Iteration:      1, Training Accuracy:   0.0%, Validation Accuracy:   0.0% 
