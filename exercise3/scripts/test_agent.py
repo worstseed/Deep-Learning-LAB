@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 from datetime import datetime
+from datetime import date
 import numpy as np
 import gym
 import os
@@ -93,8 +94,19 @@ if __name__ == "__main__":
     results["episode_rewards"] = episode_rewards
     results["mean"] = np.array(episode_rewards).mean()
     results["std"] = np.array(episode_rewards).std()
+    results["history_length"] = history_length
+    results["model_path"] = model_path
 
-    fname = "results/results_bc_agent-%s.json" % datetime.now().strftime("%Y%m%d-%H%M%S")
+    current_directory = os.getcwd()
+    fname = os.path.split(current_directory)[0]
+    fname += "/results/"
+    today = str(date.today().day) + str(date.today().month) + str(date.today().year)
+    fname += today
+
+    if not os.path.exists(fname):
+        os.mkdir(fname)
+
+    fname += "/results_bc_agent-%s.json" % datetime.now().strftime("%Y%m%d-%H%M%S")
     fh = open(fname, "w")
     json.dump(results, fh)
 
